@@ -181,7 +181,7 @@ def _(
         filtered = filtered.filter(pl.col("superhost") == True)
 
     # Sample for performance (max 600 points)
-    sample_size = min(600, len(filtered))
+    sample_size = min(300, len(filtered))
     viz_data = filtered.sample(n=sample_size, seed=42) if sample_size > 0 else filtered
     return filtered, viz_data
 
@@ -256,7 +256,9 @@ def _(alt, mo, viz_data):
         mo.stop()
 
     # Convert to pandas
-    plot_data = viz_data.to_pandas(use_pyarrow=False)
+    dict_data = viz_data.to_dict(as_series=False)
+    import pandas as pd
+    plot_data = pd.DataFrame(dict_data)
 
     # Calculate bounds
     lat_min, lat_max = plot_data['lat'].min(), plot_data['lat'].max()
