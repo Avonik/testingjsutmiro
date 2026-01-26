@@ -6,9 +6,20 @@ app = marimo.App(width="full")
 #please work
 
 
+import marimo
+import sys
+
+__generated_with = "0.19.6"
+app = marimo.App(width="full")
+
 @app.cell(hide_code=True)
-def _():
-    import marimo as mo
+async def __(mo):
+    # 1. WASM-Check: Installiert Libs nur, wenn wir im Browser sind
+    if "pyodide" in sys.modules:
+        import micropip
+        await micropip.install(["polars", "pyarrow", "pandas", "altair"])
+
+    # 2. Globale Imports
     import polars as pl
     import altair as alt
 
@@ -17,15 +28,9 @@ def _():
     mo.md("""
     # 🏠 Amsterdam Airbnb Market Analysis
     ## Understanding Price Drivers and Guest Satisfaction
-
-    Welcome to this interactive dashboard exploring Amsterdam's Airbnb market. This analysis investigates 
-    **what factors influence listing prices** and **how quality relates to cost**. Use the sidebar filters 
-    to explore different market segments!
-
-    ---
+    ... (dein Text) ...
     """)
-    return alt, mo, pl
-
+    return alt, pl
 
 @app.cell(hide_code=True)
 def _(mo, pl):
