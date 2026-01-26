@@ -256,7 +256,7 @@ def _(alt, mo, viz_data):
         mo.stop()
 
     # Convert to pandas
-    plot_data = viz_data.to_pandas()
+    plot_data = viz_data.to_pandas(use_pyarrow=False)
 
     # Calculate bounds
     lat_min, lat_max = plot_data['lat'].min(), plot_data['lat'].max()
@@ -574,7 +574,7 @@ def _(alt, filtered, mo, pl):
             pl.col("price").mean().alias("avg_price"),
             pl.col("satisfaction").mean().alias("avg_satisfaction"),
             pl.col("price").count().alias("count")
-        ]).to_pandas()
+        ]).to_pandas(use_pyarrow=False)
 
         # Price comparison
         price_comp = alt.Chart(superhost_comparison).mark_bar().encode(
