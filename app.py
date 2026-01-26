@@ -41,12 +41,23 @@ def __(mo):
     Welcome to this interactive dashboard exploring Amsterdam's Airbnb market!
     """)
 
-@app.cell(hide_code=True)
-def _(mo, pl):
-    # Load data
-    raw_df = pl.read_csv("data_Airbnb.csv")
 
-    # Clean and prepare
+@app.cell(hide_code=True)
+def __(mo, pl):
+    import io
+    # Der Google Docs Link als CSV-Export
+    csv_url = "https://docs.google.com/spreadsheets/d/1ecopK6oyyb4d_7-QLrCr8YlgFrCetHU7-VQfnYej7JY/export?format=csv"
+
+    try:
+        # 1. Versuch für den Browser (WASM/GitHub)
+        from pyodide.http import open_url
+        content = open_url(csv_url).read()
+        raw_df = pl.read_csv(io.StringIO(content))
+    except:
+        # 2. Fallback für dein lokales PyCharm
+        raw_df = pl.read_csv(csv_url)
+
+    # Ab hier dein originaler Cleaning-Code
     df = raw_df.select([
         pl.col("realSum").cast(pl.Float64).alias("price"),
         pl.col("room_type").alias("room_type"),
@@ -76,7 +87,7 @@ def _(mo, pl):
     - **Room type** and capacity
     - **Superhost** status
     """)
-    return (df,)
+    return df, raw_df
 
 
 @app.cell(hide_code=True)
