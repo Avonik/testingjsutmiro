@@ -576,7 +576,7 @@ def _(alt, filtered, mo, pl):
             pl.col("price").mean().alias("avg_price"),
             pl.col("satisfaction").mean().alias("avg_satisfaction"),
             pl.col("price").count().alias("count")
-        ]).to_pandas(use_pyarrow=False)
+        ]).to_pandas()
 
         # Price comparison
         price_comp = alt.Chart(superhost_comparison).mark_bar().encode(
