@@ -565,7 +565,6 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(alt, filtered, mo, pl):
-    import pandas as pd  # Lokal importieren
 
     price_comp = None
     sat_comp = None
