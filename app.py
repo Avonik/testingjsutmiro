@@ -7,19 +7,7 @@ __generated_with = "0.19.6"
 app = marimo.App(width="full")
 #please work
 
-@app.cell(hide_code=True)
-async def __(mo):
-    import sys
-    # Only run this if we are in a browser (WASM)
-    if "pyodide" in sys.modules:
-        import micropip
-        # This tells the browser to download your 'uv' dependencies
-        await micropip.install(["polars", "pyarrow", "pandas", "altair"])
 
-    import polars as pl
-    import pandas as pd
-    import altair as alt
-    return alt, pl, pd
 
 @app.cell(hide_code=True)
 def _():
