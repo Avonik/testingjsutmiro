@@ -565,20 +565,26 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(alt, filtered, mo, pl):
+    import pandas as pd  # Lokal importieren
+
     price_comp = None
     sat_comp = None
     superhost_comparison = None
     charts_display = None
 
     if len(filtered) > 0:
-        # Compare superhost vs regular
-        superhost_comparison = filtered.group_by("superhost").agg([
+        # 1. Die Aggregation bleibt in Polars (schnell!)
+        agg_df = filtered.group_by("superhost").agg([
             pl.col("price").mean().alias("avg_price"),
             pl.col("satisfaction").mean().alias("avg_satisfaction"),
             pl.col("price").count().alias("count")
-        ]).to_pandas(use_pyarrow=False)
+        ])
 
-        # Price comparison
+        # 2. PANIC-SAFE: Umwandlung über Dictionary statt to_pandas()
+        dict_data = agg_df.to_dict(as_series=False)
+        superhost_comparison = pd.DataFrame(dict_data)
+
+        # 3. Der restliche Altair-Code nutzt jetzt das sichere superhost_comparison
         price_comp = alt.Chart(superhost_comparison).mark_bar().encode(
             x=alt.X('superhost:N', title='Host Type', axis=alt.Axis(
                 labelExpr="datum.value ? 'Superhost' : 'Regular Host'"
@@ -590,19 +596,6 @@ def _(alt, filtered, mo, pl):
             )),
             tooltip=['superhost:N', 'avg_price:Q', 'count:Q']
         ).properties(width=350, height=300, title='Average Price by Host Type')
-
-        # Satisfaction comparison - fixed with zero=False
-        sat_comp = alt.Chart(superhost_comparison).mark_bar().encode(
-            x=alt.X('superhost:N', title='Host Type', axis=alt.Axis(
-                labelExpr="datum.value ? 'Superhost' : 'Regular Host'"
-            )),
-            y=alt.Y('avg_satisfaction:Q', title='Average Satisfaction', scale=alt.Scale(zero=False)),
-            color=alt.Color('superhost:N', legend=None, scale=alt.Scale(
-                domain=[False, True],
-                range=['#94a3b8', '#f59e0b']
-            )),
-            tooltip=['superhost:N', 'avg_satisfaction:Q', 'count:Q']
-        ).properties(width=350, height=300, title='Average Satisfaction by Host Type')
 
         charts_display = mo.hstack([price_comp, sat_comp], gap=4)
 
