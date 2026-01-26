@@ -160,15 +160,17 @@ def _(df, mo):
 
 @app.cell(hide_code=True)
 def _(
-    df,
-    min_capacity,
-    min_satisfaction,
-    pl,
-    price_range,
-    room_types,
-    superhost_only,
+        df,
+        min_capacity,
+        min_satisfaction,
+        pl,
+        price_range,
+        room_types,
+        superhost_only,
 ):
-    # Apply filters
+    import pandas as pd
+
+    # 1. Filtern
     filtered = df.filter(
         (pl.col("price") >= price_range.value[0]) &
         (pl.col("price") <= price_range.value[1]) &
@@ -180,10 +182,17 @@ def _(
     if superhost_only.value:
         filtered = filtered.filter(pl.col("superhost") == True)
 
-    # Sample for performance (max 600 points)
+    # 2. Sampling (Speicher sparen)
     sample_size = min(300, len(filtered))
     viz_data = filtered.sample(n=sample_size, seed=42) if sample_size > 0 else filtered
-    return filtered, viz_data
+
+    # 3. ZENTRALE KONVERTIERUNG (Der Trick gegen den Panic-Error)
+    # Wir nennen die interne Variable '_temp_dict', damit sie nirgendwo kollidiert
+    _temp_dict = viz_data.to_dict(as_series=False)
+    plot_data = pd.DataFrame(_temp_dict)
+
+    # Wir geben 'plot_data' zurück, damit alle anderen Zellen es nutzen können
+    return filtered, plot_data, viz_data
 
 
 @app.cell(hide_code=True)
@@ -247,37 +256,25 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(alt, mo, viz_data):
-    if len(viz_data) == 0:
+def _(alt, mo, plot_data): # plot_data kommt von der Zelle oben
+    if len(plot_data) == 0:
         mo.callout(
             mo.md("⚠️ No listings match your current filters. Try adjusting the sidebar settings!"),
             kind="warn"
         )
         mo.stop()
 
-    # Convert to pandas
-    dict_data = viz_data.to_dict(as_series=False)
-    import pandas as pd
-    plot_data = pd.DataFrame(dict_data)
-
-    # Calculate bounds
+    # Koordinaten-Berechnung
     lat_min, lat_max = plot_data['lat'].min(), plot_data['lat'].max()
     lng_min, lng_max = plot_data['lng'].min(), plot_data['lng'].max()
-
     lat_padding = (lat_max - lat_min) * 0.05
     lng_padding = (lng_max - lng_min) * 0.05
 
     # Map visualization
     map_chart = alt.Chart(plot_data).mark_circle(size=100, opacity=0.7).encode(
-        x=alt.X('lng:Q',
-                title='Longitude',
-                scale=alt.Scale(domain=[lng_min - lng_padding, lng_max + lng_padding])),
-        y=alt.Y('lat:Q',
-                title='Latitude',
-                scale=alt.Scale(domain=[lat_min - lat_padding, lat_max + lat_padding])),
-        color=alt.Color('price:Q',
-                        scale=alt.Scale(scheme='goldred', domain=[0, 400]),
-                        title='Price (€)'),
+        x=alt.X('lng:Q', title='Longitude', scale=alt.Scale(domain=[lng_min - lng_padding, lng_max + lng_padding])),
+        y=alt.Y('lat:Q', title='Latitude', scale=alt.Scale(domain=[lat_min - lat_padding, lat_max + lat_padding])),
+        color=alt.Color('price:Q', scale=alt.Scale(scheme='goldred', domain=[0, 400]), title='Price (€)'),
         tooltip=[
             alt.Tooltip('price:Q', format='.0f', title='Price €'),
             alt.Tooltip('satisfaction:Q', format='.1f', title='Satisfaction'),
@@ -285,13 +282,10 @@ def _(alt, mo, viz_data):
             alt.Tooltip('distance:Q', format='.2f', title='Distance (km)')
         ]
     ).properties(
-        width=700,
-        height=500,
-        title='Geographic Distribution of Airbnb Listings in Amsterdam'
+        width=700, height=500, title='Geographic Distribution of Airbnb Listings'
     ).interactive()
 
-    map_chart
-    return (plot_data,)
+    return map_chart,
 
 
 @app.cell(hide_code=True)
@@ -565,6 +559,7 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(alt, filtered, mo, pl):
+    import pandas as pd
 
     price_comp = None
     sat_comp = None
@@ -572,34 +567,39 @@ def _(alt, filtered, mo, pl):
     charts_display = None
 
     if len(filtered) > 0:
-        # 1. Die Aggregation bleibt in Polars (schnell!)
+        # Aggregation in Polars
         agg_df = filtered.group_by("superhost").agg([
             pl.col("price").mean().alias("avg_price"),
             pl.col("satisfaction").mean().alias("avg_satisfaction"),
             pl.col("price").count().alias("count")
         ])
 
-        # 2. PANIC-SAFE: Umwandlung über Dictionary statt to_pandas()
-        dict_data = agg_df.to_dict(as_series=False)
-        superhost_comparison = pd.DataFrame(dict_data)
+        # Panic-Safe Konvertierung mit EIGENEM Namen für das Dictionary
+        sh_dict = agg_df.to_dict(as_series=False)
+        superhost_comparison = pd.DataFrame(sh_dict)
 
-        # 3. Der restliche Altair-Code nutzt jetzt das sichere superhost_comparison
+        # Charts mit superhost_comparison
         price_comp = alt.Chart(superhost_comparison).mark_bar().encode(
-            x=alt.X('superhost:N', title='Host Type', axis=alt.Axis(
-                labelExpr="datum.value ? 'Superhost' : 'Regular Host'"
-            )),
+            x=alt.X('superhost:N', title='Host Type',
+                    axis=alt.Axis(labelExpr="datum.value ? 'Superhost' : 'Regular Host'")),
             y=alt.Y('avg_price:Q', title='Average Price (€)'),
-            color=alt.Color('superhost:N', legend=None, scale=alt.Scale(
-                domain=[False, True],
-                range=['#94a3b8', '#f59e0b']
-            )),
+            color=alt.Color('superhost:N', legend=None,
+                            scale=alt.Scale(domain=[False, True], range=['#94a3b8', '#f59e0b'])),
             tooltip=['superhost:N', 'avg_price:Q', 'count:Q']
         ).properties(width=350, height=300, title='Average Price by Host Type')
 
+        sat_comp = alt.Chart(superhost_comparison).mark_bar().encode(
+            x=alt.X('superhost:N', title='Host Type',
+                    axis=alt.Axis(labelExpr="datum.value ? 'Superhost' : 'Regular Host'")),
+            y=alt.Y('avg_satisfaction:Q', title='Average Satisfaction', scale=alt.Scale(zero=False)),
+            color=alt.Color('superhost:N', legend=None,
+                            scale=alt.Scale(domain=[False, True], range=['#94a3b8', '#f59e0b'])),
+            tooltip=['superhost:N', 'avg_satisfaction:Q', 'count:Q']
+        ).properties(width=350, height=300, title='Average Satisfaction by Host Type')
+
         charts_display = mo.hstack([price_comp, sat_comp], gap=4)
 
-    charts_display
-    return
+    return charts_display, price_comp, sat_comp, superhost_comparison
 
 
 @app.cell(hide_code=True)
