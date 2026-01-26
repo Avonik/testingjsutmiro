@@ -1,17 +1,14 @@
 import marimo
 
-#Contributions:
-#Julian Hermes - analysis, installed Marimo, build dashboard, deployed dashboard
 
 __generated_with = "0.19.6"
 app = marimo.App(width="full")
 #please work
 
 
-
 @app.cell(hide_code=True)
 def _():
-    import app as mo
+    import marimo as mo
     import polars as pl
     import altair as alt
 
