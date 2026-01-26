@@ -6,33 +6,34 @@ app = marimo.App(width="full")
 #please work
 
 
-import marimo
+import marimo as mo
 
 
 __generated_with = "0.19.6"
 app = marimo.App(width="full")
 
+
 @app.cell(hide_code=True)
 async def __(mo):
     import sys
+    import polars as pl
+    import altair as alt
 
-    # 1. WASM-Check: Installiert Libs nur, wenn wir im Browser sind
     if "pyodide" in sys.modules:
         import micropip
         await micropip.install(["polars", "pyarrow", "pandas", "altair"])
 
-    # 2. Globale Imports
-    import polars as pl
-    import altair as alt
-
     alt.data_transformers.disable_max_rows()
+    return alt, pl
 
-    mo.md("""
+@app.cell(hide_code=True)
+def __(mo):
+    return mo.md("""
     # 🏠 Amsterdam Airbnb Market Analysis
     ## Understanding Price Drivers and Guest Satisfaction
-    ... (dein Text) ...
+
+    Welcome to this interactive dashboard exploring Amsterdam's Airbnb market!
     """)
-    return alt, pl
 
 @app.cell(hide_code=True)
 def _(mo, pl):
