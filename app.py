@@ -7,13 +7,15 @@ app = marimo.App(width="full")
 
 
 import marimo
-import sys
+
 
 __generated_with = "0.19.6"
 app = marimo.App(width="full")
 
 @app.cell(hide_code=True)
 async def __(mo):
+    import sys
+
     # 1. WASM-Check: Installiert Libs nur, wenn wir im Browser sind
     if "pyodide" in sys.modules:
         import micropip
