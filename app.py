@@ -23,7 +23,7 @@ async def __(mo):
 
 @app.cell(hide_code=True)
 def _():
-    import marimo as mo
+    import app as mo
     import polars as pl
     import altair as alt
 
