@@ -14,17 +14,23 @@ app = marimo.App(width="full")
 
 
 @app.cell(hide_code=True)
-async def __(mo):
+async def __():
     import sys
-    import polars as pl
-    import altair as alt
+    import marimo as mo
 
+    # 1. Erst installieren (WASM/GitHub)
     if "pyodide" in sys.modules:
         import micropip
         await micropip.install(["polars", "pyarrow", "pandas", "altair"])
 
+    # 2. Erst NACH der Installation importieren
+    import polars as pl
+    import altair as alt
+
     alt.data_transformers.disable_max_rows()
-    return alt, pl
+
+    # 3. Alles zurückgeben
+    return alt, mo, pl
 
 @app.cell(hide_code=True)
 def __(mo):
